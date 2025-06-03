@@ -19,8 +19,6 @@ This project uses visual data from a raspberry pi to inference the species of bi
 
 ---
 
----
-
 ## OS Setup
 
 To get started, you'll need to write the Raspberry Pi OS (Raspbian) onto your microSD card. Follow these steps:
@@ -65,4 +63,59 @@ sudo apt autoremove -y
 
 ---
 
-Next: enabling the camera, installing servo + camera libraries, and writing the initial test script.
+## Enable Camera and Install Dependencies
+
+### 1. Verify Camera Is Detected
+
+Modern Raspberry Pi OS (Bullseye or newer) uses the `libcamera` stack, which doesn’t require manually enabling the camera in `raspi-config`.
+
+To check if the camera is detected:
+
+```bash
+libcamera-hello --list-cameras
+```
+
+If successful, you’ll see output like:
+
+```
+Available cameras
+-----------------
+0 : imx219 [3280x2464 10-bit RGGB] (...)
+```
+
+> If you see your camera listed, you're ready to proceed. If not, double-check that the ribbon cable is correctly inserted and reboot the Pi.
+
+You can test the camera with:
+
+```bash
+libcamera-still -o test.jpg
+```
+
+---
+
+### 2. Install Pan-Tilt HAT Drivers
+
+Install the Pimoroni Pan-Tilt HAT driver and dependencies:
+
+```bash
+curl https://get.pimoroni.com/pantilt | bash
+```
+
+This will:
+- Install required Python libraries (`gpiozero`, `pigpio`, `pantilthat`)
+- Set up the `pigpiod` daemon to run at boot
+- Enable I2C and SPI interfaces if needed
+
+---
+
+### 3. Install libcamera Utilities
+
+If not already installed, add the full camera utility suite:
+
+```bash
+sudo apt install -y libcamera-apps
+```
+
+---
+
+Next: writing a Python script to control the pan/tilt and capture images.
