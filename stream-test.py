@@ -2,16 +2,22 @@
 from flask import Flask, Response
 from picamera2 import Picamera2
 from libcamera import Transform
+from time import sleep
 import cv2
 
 app = Flask(__name__)
 picam2 = Picamera2()
 picam2.configure(picam2.create_video_configuration(
-    main={"size": (1920, 1080)},
+    main={"size": (1280, 720)},
     transform=Transform(hflip=True, vflip=True)  # 180° flip
 ))
-picam2.set_controls({"AwbMode": 0})  # Auto white balance
 picam2.start()
+sleep(2)  # Now this will work properly
+metadata = picam2.capture_metadata()
+picam2.set_controls({
+    "AwbMode": 0,
+    "ColourGains": metadata["ColourGains"]
+})
 
 def generate_frames():
     while True:
