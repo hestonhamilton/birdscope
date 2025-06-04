@@ -95,16 +95,55 @@ libcamera-still -o test.jpg
 
 ### 2. Install Pan-Tilt HAT Drivers
 
-Install the Pimoroni Pan-Tilt HAT driver and dependencies:
+The easiest way to install the Pan-Tilt HAT drivers and setup tools is via Pimoroni’s official install script:
 
 ```bash
 curl https://get.pimoroni.com/pantilt | bash
 ```
 
 This will:
-- Install required Python libraries (`gpiozero`, `pigpio`, `pantilthat`)
+- Install required Python libraries (`gpiozero`, `pigpio`, `pantilthat`, etc.)
 - Set up the `pigpiod` daemon to run at boot
 - Enable I2C and SPI interfaces if needed
+- Provide example scripts and documentation
+
+> ⚠️ On modern Raspberry Pi OS (Bookworm or newer), this may fail due to Python environment protections (PEP 668). If that happens, use the alternative install method below.
+
+---
+
+### Alternate Setup (Virtual Environment)
+
+If the script fails with an `externally-managed-environment` error, use a virtual environment instead:
+
+#### 1. Install Prerequisites
+
+```bash
+sudo apt install -y python3-venv python3-pip python3-dev
+```
+
+#### 2. Create and Activate a Virtual Environment
+
+```bash
+python3 -m venv ~/birdscope-env
+source ~/birdscope-env/bin/activate
+```
+
+#### 3. Install Required Python Packages
+
+While inside the virtual environment:
+
+```bash
+pip install pantilthat RPi.GPIO spidev picamera
+```
+
+These packages are needed to control the servos, GPIO, SPI interface, and access the camera from Python code.
+
+#### 4. Enable pigpio Daemon (outside the venv)
+
+```bash
+sudo systemctl enable pigpiod
+sudo systemctl start pigpiod
+```
 
 ---
 
@@ -116,39 +155,4 @@ If not already installed, add the full camera utility suite:
 sudo apt install -y libcamera-apps
 ```
 
----
-
-## 🔧 Install Pan-Tilt HAT (with Virtual Environment)
-
-Modern Raspberry Pi OS protects the system Python environment and can cause conflicts with the Pi HAT install script, so we'll install the required libraries in a **virtual environment** to avoid conflicts.
-
-### 1. Install Prerequisites
-
-```bash
-sudo apt install -y python3-venv python3-pip python3-dev
-```
-
-### 2. Create and Activate the Virtual Environment
-
-```bash
-python3 -m venv ~/birdscope-env
-source ~/birdscope-env/bin/activate
-```
-
----
-
-### 3. Install Pan-Tilt HAT Library
-
-While inside the virtual environment:
-
-```bash
-pip install pantilthat
-```
-
-This installs the Pimoroni library needed to control the Pan-Tilt HAT via Python.
-
-> Optional: you can also install other packages you'll use later (like OpenCV, Flask, etc.) inside this environment.
-
----
-
-Next: writing a test script to move the camera and capture an image.
+Next: writing a Python script to pan, tilt, and capture images.
