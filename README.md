@@ -155,4 +155,19 @@ If not already installed, add the full camera utility suite:
 sudo apt install -y libcamera-apps
 ```
 
+### 4. Enable I²C (Required for Pan-Tilt Communication)
+
+The Pan-Tilt HAT communicates over the I²C bus, which must be enabled manually if you’re not using the Pimoroni install script.
+
+#### Use `raspi-config`
+
+```bash
+sudo raspi-config
+```
+
+- Select **Interface Options**
+- Choose **I2C**
+- Enable it
+- Exit raspi-config menu
+
 Next: writing a Python script to pan, tilt, and capture images.
