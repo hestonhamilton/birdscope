@@ -1,48 +1,51 @@
-# birdscope
-This project uses visual data from a raspberry pi to inference the species of bird visible in that data.
+# BirdScope
 
 **BirdScope** is a Raspberry Pi-based smart birdwatching device. It captures video using the official Pi Camera Module v2, allows motorized camera movement via a Pimoroni Pan-Tilt HAT, and streams or sends images to a separate device on the network for AI-powered bird species identification.
 
 ---
 
-## Materials
+## 🧰 Materials
 
 | Component                     | Description                                          |
-|-------------------------------|------------------------------------------------------|
-| Raspberry Pi 3B+              | Main microcomputer controlling camera + motors       |
-| Raspberry Pi Camera Module v2 | 8MP camera for capturing bird imagery                |
-| Pimoroni Pan-Tilt HAT         | Dual-axis servo HAT to rotate and tilt the camera    |
-| microSD Card (16GB)           | Storage for OS and project files                     |
-| Raspberry Pi OEM Power Supply | 5V/2.5A power supply for stable operation            |
-| Network access                | WiFi or LAN access to local/remote network           |
-| Access to Secondary Device    | Any device capable of AI inferencing                 |
+|------------------------------|------------------------------------------------------|
+| Raspberry Pi 3B+             | Main microcomputer controlling camera + motors      |
+| Raspberry Pi Camera Module v2| 8MP camera for capturing bird imagery               |
+| Pimoroni Pan-Tilt HAT        | Dual-axis servo HAT to rotate and tilt the camera   |
+| microSD Card (16GB)          | Storage for OS and project files                    |
+| Raspberry Pi OEM Power Supply| 5V/2.5A power supply for stable operation           |
+| Network Access               | Wi-Fi or LAN access to local/remote network         |
+| Secondary Device             | Any device capable of running AI inference models   |
 
 ---
 
-## OS Setup
+## ⚙️ OS Setup
 
 To get started, you'll need to write the Raspberry Pi OS (Raspbian) onto your microSD card. Follow these steps:
 
 ### 1. Download Raspberry Pi Imager
-- Download the official [Raspberry Pi Imager](https://www.raspberrypi.com/software/) for your operating system (Windows, macOS, or Linux).
+
+- Download the official [Raspberry Pi Imager](https://www.raspberrypi.com/software/) for your OS (Windows, macOS, or Linux).
 - Insert your **16GB microSD card** into your computer using a card reader.
 
 ### 2. Write the OS to the SD Card
+
 - Launch Raspberry Pi Imager.
 - Click **"Choose OS"** and select:
   - `Raspberry Pi OS (64-bit)` or
   - `Raspberry Pi OS Lite (64-bit)`
 - Click **"Choose Storage"** and select your SD card.
-- Before writing, click the gear ⚙️ icon (advanced options) and:
-  - Set a hostname (e.g., `birdscope.local`)
-  - Enable SSH (use password or public key)
-  - Set default username and password
-  - Configure Wi-Fi (SSID, password, country)
-- Click **"Write"** and wait for the process to complete.
+- Click the gear ⚙️ icon (advanced options) and configure:
+  - Hostname (e.g., `birdscope.local`)
+  - Enable SSH (with password or public key)
+  - Set default username/password
+  - Wi-Fi SSID, password, and country
+
+Then click **Write** and wait for the process to complete.
 
 ### 3. Boot the Pi
+
 - Insert the microSD card into your Raspberry Pi 3B+.
-- Connect power and wait 1–2 minutes for initial setup.
+- Connect power and wait 1–2 minutes for first boot.
 - You should now be able to SSH into the Pi:
   ```bash
   ssh pi@birdscope.local
@@ -50,52 +53,53 @@ To get started, you'll need to write the Raspberry Pi OS (Raspbian) onto your mi
 
 ---
 
-## Update System Packages
+## 🛠 System Preparation
 
-After logging into your Pi for the first time, run the following to make sure your system is fully up to date:
+### 1. Update System Packages
+
+Run these commands to ensure your Pi is fully updated:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt autoremove -y
 ```
 
-> This ensures that all packages, firmware, and the OS itself are current and reduces the chance of compatibility issues with Python libraries and peripherals.
-
 ---
 
-## Enable Camera and Install Dependencies
+## 📸 Camera Setup
 
-### 1. Verify Camera Is Detected
+### 1. Verify Camera is Detected
 
-Modern Raspberry Pi OS (Bullseye or newer) uses the `libcamera` stack, which doesn’t require manually enabling the camera in `raspi-config`.
+Raspberry Pi OS Bullseye and newer use the `libcamera` stack, so no `raspi-config` setting is required.
 
-To check if the camera is detected:
+Check for connected camera:
 
 ```bash
 libcamera-hello --list-cameras
 ```
 
-If successful, you’ll see output like:
-
+Expected output:
 ```
 Available cameras
 -----------------
 0 : imx219 [3280x2464 10-bit RGGB] (...)
 ```
 
-> If you see your camera listed, you're ready to proceed. If not, double-check that the ribbon cable is correctly inserted and reboot the Pi.
-
-You can test the camera with:
+Test a capture:
 
 ```bash
 libcamera-still -o test.jpg
 ```
 
+> If your camera isn’t detected, check the ribbon cable connection and reboot.
+
 ---
 
-### 2. Install Pan-Tilt HAT Drivers
+## 🔌 Pan-Tilt HAT Setup
 
-The easiest way to install the Pan-Tilt HAT drivers and setup tools is via Pimoroni’s official install script:
+### 1. Install Pan-Tilt HAT Drivers (Recommended)
+
+Install using Pimoroni’s official script:
 
 ```bash
 curl https://get.pimoroni.com/pantilt | bash
@@ -103,42 +107,47 @@ curl https://get.pimoroni.com/pantilt | bash
 
 This will:
 - Install required Python libraries (`gpiozero`, `pigpio`, `pantilthat`, etc.)
-- Set up the `pigpiod` daemon to run at boot
-- Enable I2C and SPI interfaces if needed
+- Enable I2C and SPI interfaces
+- Set up the `pigpiod` daemon
 - Provide example scripts and documentation
 
-> ⚠️ On modern Raspberry Pi OS (Bookworm or newer), this may fail due to Python environment protections (PEP 668). If that happens, use the alternative install method below.
+> ⚠️ On Raspberry Pi OS Bookworm, this may fail due to Python environment protections (PEP 668). If so, follow the system-wide install steps below.
 
 ---
 
-### Alternate Setup (Virtual Environment)
+### 2. Enable I²C (Required for Pan-Tilt Communication)
 
-If the script fails with an `externally-managed-environment` error, use a virtual environment instead:
-
-#### 1. Install Prerequisites
+If you didn’t use the Pimoroni script, you must enable I²C manually:
 
 ```bash
-sudo apt install -y python3-venv python3-pip python3-dev
+sudo raspi-config
 ```
 
-#### 2. Create and Activate a Virtual Environment
+- Select **Interface Options**
+- Enable **I2C**
+- Exit and reboot if prompted
+
+---
+
+## 🔧 Install Dependencies (System-Wide)
+
+To simplify compatibility with `picamera2`, install all Python packages via `apt` instead of a virtual environment.
 
 ```bash
-python3 -m venv ~/birdscope-env
-source ~/birdscope-env/bin/activate
+sudo apt install -y python3-picamera2 python3-opencv python3-flask libcamera-apps
 ```
 
-#### 3. Install Required Python Packages
+This installs:
+- `picamera2`: modern Raspberry Pi camera library (uses libcamera)
+- `opencv`: for face/bird recognition
+- `flask`: for video streaming to the browser
+- `libcamera-apps`: command-line tools like `libcamera-hello`, `libcamera-still`, etc.
 
-While inside the virtual environment:
+---
 
-```bash
-pip install pantilthat RPi.GPIO spidev picamera
-```
+### 3. Enable `pigpio` Daemon (If Not Already Enabled)
 
-These packages are needed to control the servos, GPIO, SPI interface, and access the camera from Python code.
-
-#### 4. Enable pigpio Daemon (outside the venv)
+This is required for servo control via `pantilthat`:
 
 ```bash
 sudo systemctl enable pigpiod
@@ -147,27 +156,9 @@ sudo systemctl start pigpiod
 
 ---
 
-### 3. Install libcamera Utilities
+✅ You're now ready to write Python scripts that:
+- Control the pan/tilt movement
+- Stream video to a browser
+- Detect birds or faces in the video stream
 
-If not already installed, add the full camera utility suite:
-
-```bash
-sudo apt install -y libcamera-apps
-```
-
-### 4. Enable I²C (Required for Pan-Tilt Communication)
-
-The Pan-Tilt HAT communicates over the I²C bus, which must be enabled manually if you’re not using the Pimoroni install script.
-
-#### Use `raspi-config`
-
-```bash
-sudo raspi-config
-```
-
-- Select **Interface Options**
-- Choose **I2C**
-- Enable it
-- Exit raspi-config menu
-
-Next: writing a Python script to pan, tilt, and capture images.
+Next: build your first test script using `picamera2` and `opencv`.
