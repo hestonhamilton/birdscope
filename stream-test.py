@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 from flask import Flask, Response
 from picamera2 import Picamera2
+from libcamera import Transform
 import cv2
 
 app = Flask(__name__)
 picam2 = Picamera2()
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+picam2.configure(picam2.create_video_configuration(
+    main={"size": (1920, 1080)},
+    transform=Transform(hflip=True, vflip=True)  # 180° flip
+))
+picam2.set_controls({"AwbMode": 0})  # Auto white balance
 picam2.start()
 
 def generate_frames():
