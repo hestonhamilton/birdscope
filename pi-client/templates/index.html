@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Birdscope Live Feed & Pan/Tilt Controls</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #video-feed { border: 1px solid black; display: block; margin-top: 20px; }
+        .controls button { margin: 5px; padding: 10px 15px; font-size: 16px; cursor: pointer; }
+        .status-info { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>Birdscope Live Feed & Pan/Tilt Controls</h1>
+
+    <h2>Live Camera Feed</h2>
+    <img id="video-feed" src="{{ url_for('video_feed') }}" width="640" height="480" />
+
+    <h2>Pan/Tilt Controls</h2>
+    <div class="controls">
+        <h3>Pan Control</h3>
+        <button onclick="movePan(10)">Pan Left (-10°)</button>
+        <button onclick="movePan(1)">Pan Left (-1°)</button>
+        <button onclick="setPanAbsolute(0)">Pan Center (0°)</button> <button onclick="movePan(-1)">Pan Right (+1°)</button>
+        <button onclick="movePan(-10)">Pan Right (+10°)</button>
+        <p>Current Pan: <span id="currentPan">Loading...</span>°</p>
+
+        <h3>Tilt Control</h3>
+        <button onclick="moveTilt(10)">Tilt Down (-10°)</button>
+        <button onclick="moveTilt(1)">Tilt Down (-1°)</button>
+        <button onclick="setTiltAbsolute(0)">Tilt Center (0°)</button> <button onclick="moveTilt(-1)">Tilt Up (+1°)</button>
+        <button onclick="moveTilt(-10)">Tilt Up (+10°)</button>
+        <p>Current Tilt: <span id="currentTilt">Loading...</span>°</p>
+
+        <button onclick="enableServos(false)">Disable Servos</button>
+        <button onclick="enableServos(true)">Enable Servos</button>
+        <p>Servo State: <span id="servoState">Loading...</span></p>
+    </div>
+
+    <div class="status-info">
+        <h2>System Status</h2>
+        <p>Timestamp: <span id="timestamp">Loading...</span></p>
+    </div>
+
+    <script>
+        // Function to update status information
+        function updateStatus() {
+            fetch('/status_json')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('timestamp').innerText = data.timestamp;
+                    document.getElementById('currentPan').innerText = data.current_pan.toFixed(2);
+                    document.getElementById('currentTilt').innerText = data.current_tilt.toFixed(2);
+                    document.getElementById('servoState').innerText = data.servo_enabled ? 'Enabled' : 'Disabled';
+                })
+                .catch(error => console.error('Error fetching status:', error));
+        }
+
+        // Functions for Pan/Tilt controls (offset-based)
+        function movePan(angle_offset) {
+            fetch('/move_pan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ angle_offset: angle_offset })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log("Pan moved successfully (offset).");
+                    updateStatus();
+                } else {
+                    console.error("Failed to move pan (offset):", data.message);
+                }
+            })
+            .catch(error => console.error('Error moving pan (offset):', error));
+        }
+
+        function moveTilt(angle_offset) {
+            fetch('/move_tilt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ angle_offset: angle_offset })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log("Tilt moved successfully (offset).");
+                    updateStatus();
+                } else {
+                    console.error("Failed to move tilt (offset):", data.message);
+                }
+            })
+            .catch(error => console.error('Error moving tilt (offset):', error));
+        }
+
+        // NEW FUNCTIONS for absolute positioning
+        function setPanAbsolute(target_angle) {
+            fetch('/set_pan_absolute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_angle: target_angle })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log(`Pan set to ${target_angle}° (absolute).`);
+                    updateStatus();
+                } else {
+                    console.error("Failed to set pan absolute:", data.message);
+                }
+            })
+            .catch(error => console.error('Error setting pan absolute:', error));
+        }
+
+        function setTiltAbsolute(target_angle) {
+            fetch('/set_tilt_absolute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_angle: target_angle })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log(`Tilt set to ${target_angle}° (absolute).`);
+                    updateStatus();
+                } else {
+                    console.error("Failed to set tilt absolute:", data.message);
+                }
+            })
+            .catch(error => console.error('Error setting tilt absolute:', error));
+        }
+
+
+        function enableServos(state) {
+            fetch('/enable_servos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state: state })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    console.log(`Servos ${state ? 'enabled' : 'disabled'} successfully.`);
+                    updateStatus();
+                } else {
+                    console.error(`Failed to ${state ? 'enable' : 'disable'} servos:`, data.message);
+                }
+            })
+            .catch(error => console.error('Error enabling/disabling servos:', error));
+        }
+
+        // Initial status update and then refresh every 2 seconds
+        updateStatus();
+        setInterval(updateStatus, 2000);
+
+    </script>
+</body>
+</html>
