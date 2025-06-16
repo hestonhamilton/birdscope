@@ -13,6 +13,7 @@
 .env*
 *config.yaml
 gpu-server/received_images/
+pi-client/sent_images/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
