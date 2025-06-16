@@ -9,18 +9,31 @@ def create_app(camera, pan_tilt_helper, motion_detector):
     servo_2_enabled = True
 
     def generate_frames():
+        if camera is None:
+            print("Camera not available for streaming. Showing placeholder.")
+            dummy_frame = 255 * (cv2.imread('no_camera.jpg') if cv2.haveImageReader('no_camera.jpg') else None)
+            if dummy_frame is None or dummy_frame.shape[0] == 0:
+                dummy_frame = cv2.cvtColor(dummy_frame if dummy_frame is not None else (0, 0, 0), cv2.COLOR_BGR2RGB)
+                dummy_frame = cv2.circle(dummy_frame, (320, 240), 100, (0, 0, 255), -1)
+                dummy_frame = cv2.putText(dummy_frame, "NO CAMERA FEED", (150, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+            _, buffer = cv2.imencode('.jpg', dummy_frame)
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            return
+
         while True:
             try:
                 frame = camera.capture_array()
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                flipped = cv2.flip(frame_rgb, -1)
-                _, buffer = cv2.imencode('.jpg', flipped)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                ret, buffer = cv2.imencode('.jpg', frame_rgb)
+                yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
                 time.sleep(0.03)
             except Exception as e:
-                print(f"Stream error: {e}")
+                print(f"Error in camera streaming: {e}")
                 break
-
+            
     @app.route('/')
     def index():
         return render_template('index.html')

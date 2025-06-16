@@ -99,3 +99,5 @@ if __name__ == "__main__":
             print("Failed to decode image.")
     else:
         print("Failed to encode image.")
+
+
