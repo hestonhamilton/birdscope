@@ -1,0 +1,4 @@
+broker: localhost       # Local Mosquitto broker
+port: 1883
+image_topic: birdscope/image
+save_dir: received_images
