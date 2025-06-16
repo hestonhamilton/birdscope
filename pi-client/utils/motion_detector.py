@@ -6,15 +6,8 @@ from libcamera import Transform
 import time
 
 class MotionDetector:
-    def __init__(self, threshold=5000, sleep_time=0.2):
-        self.picam2 = Picamera2()
-        self.picam2.configure(self.picam2.create_video_configuration(
-            main={"size": (640, 480)},
-            transform=Transform(hflip=True, vflip=True)
-        ))
-        self.picam2.start()
-        time.sleep(1)
-
+    def __init__(self, picam2, threshold=5000, sleep_time=0.2):
+        self.picam2 = picam2
         self.prev_gray = None
         self.threshold = threshold
         self.sleep_time = sleep_time
@@ -37,3 +30,4 @@ class MotionDetector:
         self.prev_gray = gray
         time.sleep(self.sleep_time)
         return motion
+

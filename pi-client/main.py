@@ -4,6 +4,7 @@ import time
 import cv2
 from picamera2 import Picamera2
 from utils.tilt_controller import PanTiltHelper
+from utils.motion_detector import MotionDetector
 
 app = Flask(__name__)
 
@@ -26,6 +27,7 @@ except Exception as e:
 
 servo_1_enabled = True
 servo_2_enabled = True
+motion_detector = None
 
 def generate_frames():
     """
@@ -167,6 +169,26 @@ def enable_servos():
 
     return jsonify({"status": "success", "servos_enabled": state})
 
+
+@app.route('/test_motion')
+def test_motion():
+    global motion_detector
+    if motion_detector is None:
+        try:
+            motion_detector = MotionDetector()
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Failed to init MotionDetector: {e}"}), 500
+
+    try:
+        for _ in range(3):  # Warm-up with dummy frames
+            motion_detector.detect_motion()
+            time.sleep(0.1)
+
+        detected = motion_detector.detect_motion()
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Motion detection error: {e}"}), 500
+
+    return jsonify({"status": "success", "motion_detected": detected})
 
 if __name__ == '__main__':
     print("Visit http://<pi-ip>:5050/ to control Pan/Tilt HAT and view live camera feed.")
