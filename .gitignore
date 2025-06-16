@@ -12,6 +12,7 @@
 .venv*
 .env*
 *config.yaml
+gpu-server/received_images/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
