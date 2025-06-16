@@ -3,7 +3,7 @@ from flask import Flask, render_template, Response, request, jsonify
 import time
 import cv2
 from picamera2 import Picamera2
-from tilt_controller import PanTiltHelper
+from utils.tilt_controller import PanTiltHelper
 
 app = Flask(__name__)
 
