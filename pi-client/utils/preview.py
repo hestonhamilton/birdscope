@@ -1,4 +1,4 @@
-# tilt_controller.py
+# tilt_utils.py
 
 import pantilthat
 import time
