@@ -14,6 +14,8 @@
 *config.yaml
 gpu-server/received_images/
 pi-client/sent_images/
+gpu-server/logs/
+gpu-server/static/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
