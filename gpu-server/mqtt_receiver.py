@@ -1,55 +1,66 @@
-import os
-import time
-import yaml
-import cv2
-import numpy as np
-from dotenv import load_dotenv
-import paho.mqtt.client as mqtt
+# mqtt_receiver.py
 
-# === Load .env for sensitive credentials ===
+import os
+import base64
+import uuid
+import paho.mqtt.client as mqtt
+from datetime import datetime
+from dotenv import load_dotenv
+
+from inference.predict import predict
+from inference.image_utils import save_annotated_image, log_predictions
+
+# === Load environment and configuration ===
 load_dotenv()
+
+MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_USERNAME = os.getenv("MQTT_USERNAME")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "birdscope/image")
 
-# === Load config.yaml ===
-with open("config.yaml") as f:
-    config = yaml.safe_load(f)
-
-BROKER = config["broker"]
-PORT = config["port"]
-TOPIC = config["image_topic"]
-SAVE_DIR = config["save_dir"]
-os.makedirs(SAVE_DIR, exist_ok=True)
+IMAGE_DIR = "received_images"
+os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # === MQTT Handlers ===
+def save_incoming_image(payload_bytes) -> str:
+    """
+    Save raw JPEG bytes from MQTT to a unique file in IMAGE_DIR.
+    Returns full path to saved image.
+    """
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{uuid.uuid4().hex[:8]}.jpg"
+    path = os.path.join(IMAGE_DIR, filename)
+    with open(path, "wb") as f:
+        f.write(payload_bytes)
+    print(f"[✔] Image saved: {path}")
+    return path
+
 def on_connect(client, userdata, flags, rc):
-    print(f"[MQTT] Connected with result code {rc}")
     if rc == 0:
-        print(f"[MQTT] Subscribing to topic: {TOPIC}")
-        client.subscribe(TOPIC)
+        print(f"[MQTT] Connected successfully to {MQTT_BROKER}:{MQTT_PORT}")
+        client.subscribe(MQTT_TOPIC)
     else:
-        print("[MQTT] Connection failed — check credentials or broker config.")
+        print(f"[MQTT] Connection failed with code {rc}")
 
 def on_message(client, userdata, msg):
-    print(f"[MQTT] Message received on {msg.topic} ({len(msg.payload)} bytes)")
-    np_arr = np.frombuffer(msg.payload, np.uint8)
-    image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    if image is None:
-        print("[MQTT] Failed to decode image.")
-        return
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = os.path.join(SAVE_DIR, f"{timestamp}.jpg")
-    cv2.imwrite(filename, image)
-    print(f"[MQTT] Saved: {filename}")
+    print(f"[MQTT] Received message on topic: {msg.topic}")
+    try:
+        image_path = save_incoming_image(msg.payload)
+        detections = predict(image_path)
+        save_annotated_image(image_path, detections)
+        log_predictions(image_path, detections)
+    except Exception as e:
+        print(f"[!] Error during inference: {e}")
 
-# === Setup MQTT client ===
-client = mqtt.Client()
-if MQTT_USERNAME and MQTT_PASSWORD:
-    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+# === MQTT Client Setup ===
+if __name__ == "__main__":
+    client = mqtt.Client()
+    if MQTT_USERNAME:
+        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
 
-client.on_connect = on_connect
-client.on_message = on_message
-
-client.connect(BROKER, PORT)
-client.loop_forever()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT)
+    client.loop_forever()
 
