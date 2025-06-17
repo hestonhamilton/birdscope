@@ -47,9 +47,7 @@ def on_message(client, userdata, msg):
     print(f"[MQTT] Received message on topic: {msg.topic}")
     try:
         image_path = save_incoming_image(msg.payload)
-        detections = predict(image_path)
-        save_annotated_image(image_path, detections)
-        log_predictions(image_path, detections)
+        predict(image_path)  # now handles saving + logging
     except Exception as e:
         print(f"[!] Error during inference: {e}")
 

@@ -2,24 +2,37 @@
 
 import torch
 import cv2
+import json
+import os
 import numpy as np
+import shutil
+from datetime import datetime
 from PIL import Image
 from inference.detector import load_detector
 from inference.classifier import BirdClassifier
-from inference.image_utils import preprocess_image, save_annotated_image, log_predictions
+from inference.image_utils import (
+    preprocess_image,
+    save_annotated_image,
+    log_predictions,
+)
 
-# === Load models ===
+# === Load models once ===
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 detector = load_detector(device)
 classifier = BirdClassifier(device=device)
 
+STATIC_DIR = "static"
+os.makedirs(STATIC_DIR, exist_ok=True)
+
 def predict(image_path, conf_threshold=0.5):
+    # === Load image ===
     image_bgr = cv2.imread(image_path)
     if image_bgr is None:
         raise ValueError(f"Failed to load image: {image_path}")
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
     input_tensor = preprocess_image(image_rgb).unsqueeze(0).to(device)
 
+    # === Run object detection ===
     with torch.no_grad():
         outputs = detector(input_tensor)[0]
 
@@ -51,14 +64,23 @@ def predict(image_path, conf_threshold=0.5):
             "confidence": round(confidence, 3)
         })
 
+    # === Postprocessing ===
+    if results:
+        annotated_path = save_annotated_image(image_path, results)
+        log_predictions(image_path, results)
+
+        # Copy to static/ for gallery
+        static_path = os.path.join(STATIC_DIR, os.path.basename(annotated_path))
+        if annotated_path != static_path:
+            shutil.copy(annotated_path, static_path)
+            print(f"[✔] Copied to gallery: {static_path}")
+
     return results
 
 if __name__ == "__main__":
     test_img = "test.jpg"
-    predictions = predict(test_img)
-    save_path = save_annotated_image(test_img, predictions)
-    log_predictions(test_img, predictions)
-    
-    for i, det in enumerate(predictions):
+    preds = predict(test_img)
+
+    for i, det in enumerate(preds):
         print(f"[{i}] Box: {det['box']}, Score: {det['score']}, Label: {det['label']}, Species: {det['species']}")
 
