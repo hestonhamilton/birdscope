@@ -3,6 +3,7 @@
 import os
 import base64
 import uuid
+import time
 import paho.mqtt.client as mqtt
 from datetime import datetime
 from dotenv import load_dotenv
@@ -52,7 +53,8 @@ def on_message(client, userdata, msg):
         print(f"[!] Error during inference: {e}")
 
 # === MQTT Client Setup ===
-if __name__ == "__main__":
+def run(stop_event=None):
+    """Start the MQTT receiver loop."""
     client = mqtt.Client()
     if MQTT_USERNAME:
         client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
@@ -60,5 +62,24 @@ if __name__ == "__main__":
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT)
-    client.loop_forever()
+
+    client.loop_start()
+    print("[MQTT] Receiver started")
+    try:
+        if stop_event:
+            stop_event.wait()
+        else:
+            while True:
+                time.sleep(1)
+    finally:
+        client.loop_stop()
+        client.disconnect()
+        print("[MQTT] Receiver stopped")
+
+
+if __name__ == "__main__":
+    try:
+        run()
+    except KeyboardInterrupt:
+        print("[MQTT] Interrupted, shutting down")
 
