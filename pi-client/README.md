@@ -1,10 +1,10 @@
-# 🐦 Birdscope Pi Client
+# Birdscope Pi Client
 
 This Raspberry Pi client captures video, detects motion, and sends frames to a GPU server over MQTT for bird detection and classification.
 
 ---
 
-## 📦 Features
+## Features
 
 - Motion detection using frame differencing
 - JPEG image encoding and MQTT publishing
@@ -15,114 +15,189 @@ This Raspberry Pi client captures video, detects motion, and sends frames to a G
 
 ---
 
-## 📁 Project Structure
+## Materials
 
-```
-pi-client/
-├── main.py                  # Old Flask entry point (now uses app.py)
-├── app.py                   # Flask routes for video + control
-├── motion_mqtt_loop.py      # Main runtime script (motion → image → MQTT)
-├── send_test_image.py       # Manual test image sender
-├── tilt_preview.py          # Manual pan/tilt test
-├── config.yaml              # Broker IP, topics, tilt limits
-├── .env                     # MQTT credentials
-├── requirements.txt         # Python dependencies
-├── templates/
-│   └── index.html           # Web control UI
-├── utils/
-│   ├── camera.py            # PiCamera2 wrapper
-│   ├── image_utils.py       # JPEG encode/decode
-│   ├── mqtt_sender.py       # MQTT send logic
-│   ├── tilt_controller.py   # PanTilt HAT servo helper
-│   └── motion_detector.py   # Frame diff motion logic
-```
+| Component                     | Description                                  |
+|-------------------------------|----------------------------------------------|
+| Raspberry Pi 3B+ or newer     | Hosts camera, HAT, and motion logic          |
+| Camera Module v2              | 8MP image sensor with ribbon connector       |
+| Pimoroni Pan-Tilt HAT         | Dual servo control for positioning camera    |
+| microSD Card (16GB or more)   | OS and code storage                          |
+| Power Supply (5V/2.5A+)       | Reliable power for camera and motors         |
 
 ---
 
-## ⚙️ Setup
+## OS Installation & Camera Setup
 
-### 🐍 Python Dependencies
+### 1. Flash Raspberry Pi OS
+
+- Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+- Choose `Raspberry Pi OS Lite (64-bit)`
+- Use the gear icon to:
+  - Set hostname (e.g. `birdscope.local`)
+  - Enable SSH
+  - Set user/password
+  - Configure Wi-Fi (SSID, pass)
+
+### 2. Boot & Update System
+
+SSH into your Pi after first boot:
 
 ```bash
-sudo apt-get update
-sudo apt-get install python3-picamera2 python3-opencv python3-paho-mqtt python3-yaml
-pip3 install python-dotenv
+ssh pi@birdscope.local
 ```
 
-> If using legacy Pi OS: install `libcamera` support and ensure your system supports Picamera2.
+Update packages:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt autoremove -y
+```
+
+### 3. Verify Camera Detection
+
+Modern Pi OS uses libcamera:
+
+```bash
+libcamera-hello --list-cameras
+```
+
+Expect output like:
+
+```
+0 : imx219 [3280x2464 10-bit RGGB] (/base/soc/i2c0mux/i2c@1/imx219@10)
+```
+
+Test capture:
+
+```bash
+libcamera-still -o test.jpg
+```
 
 ---
 
-### 📄 `config.yaml`
+## Install Dependencies
 
-```yaml
-broker: BROKER_IP                 # IP of the GPU server
-port: 1883
-image_topic: birdscope/image
-status_topic: birdscope/status
+### System Packages
+
+```bash
+sudo apt-get install -y python3-picamera2 python3-opencv \
+    python3-paho-mqtt python3-yaml python3-flask \
+    python3-gpiozero python3-pigpio python3-dotenv
+```
+
+### Pan-Tilt HAT Support
+
+Install Pimoroni libraries:
+
+```bash
+curl https://get.pimoroni.com/pantilt | bash
+```
+
+Ensure `pigpiod` is running:
+
+```bash
+sudo systemctl enable pigpiod
+sudo systemctl start pigpiod
 ```
 
 ---
 
-### 🔐 `.env`
+## Configuration
+
+### `.env`
+
+Create a `.env` file:
 
 ```env
 MQTT_USERNAME=birdpi
 MQTT_PASSWORD=your_password_here
 ```
 
+### `config.yaml`
+
+Example:
+
+```yaml
+broker: 192.168.1.100       # GPU server IP
+port: 1883
+image_topic: birdscope/image
+status_topic: birdscope/status
+cooldown: 30
+min_motion_area: 500
+tilt:
+  min_pan: -90
+  max_pan: 90
+  min_tilt: -45
+  max_tilt: 45
+```
+
 ---
 
-## 🚀 Running
+## Project Structure
 
-### ✅ Run Motion Detection + MQTT Sending
+```
+pi-client/
+├── main.py                  # Optional Flask control panel
+├── app.py                   # Flask UI routes and video stream
+├── motion_mqtt_loop.py      # Main runtime loop (motion → MQTT)
+├── send_test_image.py       # One-off JPEG sender
+├── tilt_preview.py          # Servo test script
+├── config.yaml              # Broker IP, topics, motion params
+├── .env                     # MQTT credentials
+├── requirements.txt         # Python dependencies
+├── templates/
+│   └── index.html           # Flask UI
+└── utils/
+    ├── camera.py            # Picamera2 wrapper
+    ├── image_utils.py       # Encode/resize logic
+    ├── mqtt_sender.py       # MQTT send logic
+    ├── tilt_controller.py   # Servo helper
+    └── motion_detector.py   # Frame diff logic
+```
+
+---
+
+## Running
+
+### Motion + MQTT Runtime
 
 ```bash
 python3 motion_mqtt_loop.py
 ```
 
-On motion detection:
-- Frame is captured
-- JPEG is sent to `image_topic` via MQTT
-- Cooldown prevents further sends for 30 seconds
+On motion:
+- Captures frame
+- Encodes as JPEG
+- Publishes to MQTT topic
 
----
-
-### 🧪 Run Manual Test
+### Manual Test Image
 
 ```bash
 python3 send_test_image.py
 ```
 
-Captures a single image and sends it immediately.
+Sends one image to GPU server for test classification.
 
----
-
-### 🌐 Run Flask UI (optional)
+### Flask UI
 
 ```bash
 python3 main.py
 ```
 
-Visit:
-
-```
-http://<pi-ip>:5050/
-```
-
-- See live video
-- Move pan/tilt
-- Test motion via `/test_motion`
+Visit `http://<pi-ip>:5050` in your browser to view the control interface.
 
 ---
 
-## 🔁 Autostart (Optional)
+## Autostart (Optional)
 
 To run `motion_mqtt_loop.py` on boot:
 
 ```bash
 sudo nano /etc/systemd/system/birdscope-motion.service
 ```
+
+Paste:
 
 ```ini
 [Unit]
@@ -139,7 +214,7 @@ Environment="PYTHONUNBUFFERED=1"
 WantedBy=multi-user.target
 ```
 
-Then enable:
+Enable it:
 
 ```bash
 sudo systemctl daemon-reexec
@@ -149,17 +224,10 @@ sudo systemctl start birdscope-motion
 
 ---
 
-## 📡 MQTT Protocol
+## MQTT Protocol
 
-| Topic             | Payload           | Description                    |
-|------------------|-------------------|--------------------------------|
-| `birdscope/image` | JPEG bytes        | Motion-triggered frame         |
-| `birdscope/status` | Text message     | Optional status/heartbeat logs |
+| Topic              | Payload           | Description                    |
+|-------------------|-------------------|--------------------------------|
+| `birdscope/image`  | JPEG bytes        | Motion-triggered frame         |
+| `birdscope/status` | Text message      | Optional status/heartbeat logs |
 
----
-
-## ✅ To Do (Optional Enhancements)
-
-- Add MQTT reconnection and retry logic
-- Send bounding box metadata from GPU server back to Pi
-- Rotate or sweep pan/tilt on motion
