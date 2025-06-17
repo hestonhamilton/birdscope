@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BirdScope Gallery</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .thumbnail {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h1 class="mb-4">BirdScope Gallery</h1>
+
+    <form class="mb-3" method="get" action="/">
+        <div class="input-group" style="max-width: 300px;">
+            <span class="input-group-text">Min Confidence</span>
+            <input type="number" step="0.01" name="min_conf" class="form-control" value="{{ min_conf }}">
+            <button class="btn btn-primary" type="submit">Filter</button>
+        </div>
+    </form>
+
+    {% if entries %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+        {% for entry in entries %}
+        <div class="col">
+            <div class="card h-100">
+                <a href="{{ url_for('static', filename=entry.image_file) }}" target="_blank">
+                    <img src="{{ url_for('static', filename=entry.image_file) }}" class="card-img-top thumbnail" alt="Bird image">
+                </a>
+                <div class="card-body">
+                    <p class="card-text"><strong>{{ entry.timestamp }}</strong></p>
+                    <ul class="mb-0">
+                        {% for det in entry.detections %}
+                        <li>{{ det.species }} ({{ '%.2f'|format(det.confidence) }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No images above confidence threshold.</p>
+    {% endif %}
+</div>
+</body>
+</html>
