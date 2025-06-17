@@ -24,10 +24,10 @@ Whether you're interested in wildlife monitoring, IoT, or end-to-end ML system d
 
 ```
 ┌────────────┐              MQTT               ┌──────────────┐
-│ Raspberry  │ ─────────────▶────────────────▶ │ GPU Server   │
+│ Raspberry  │ ─────────────▶────────────────▶│ GPU Server   │
 │ Pi Client  │                                 │ Inference    │
 │ (camera +  │                                 │ + Gallery UI │
-│ motion)    │ ◀────────────▶───────────────── │              │
+│ motion)    │ ◀────────────▶─────────────────│              │
 └────────────┘        Status (optional)        └──────────────┘
 ```
 
