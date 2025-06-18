@@ -4,7 +4,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, '..', 'logs', 'predictions.jsonl')
-STATIC_PATH = os.path.join(BASE_DIR, '..', 'received_images')
+STATIC_PATH = os.path.join(BASE_DIR, '..', 'static')
 
 app = Flask(__name__, static_folder=STATIC_PATH, template_folder='templates')
 
