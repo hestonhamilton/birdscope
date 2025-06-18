@@ -8,7 +8,6 @@ STATIC_PATH = os.path.join(BASE_DIR, '..', 'static')
 
 app = Flask(__name__, static_folder=STATIC_PATH, template_folder='templates')
 
-
 def load_predictions(min_conf: float):
     """Load predictions from log file filtered by min confidence."""
     entries = []
@@ -29,15 +28,19 @@ def load_predictions(min_conf: float):
             if not detections:
                 continue
 
+            image_file = data.get('image_file')
+            if image_file and not image_file.endswith('_annotated.jpg'):
+                name, ext = os.path.splitext(image_file)
+                image_file = f"{name}_annotated{ext}"
+
             entries.append({
                 'timestamp': data.get('timestamp'),
-                'image_file': data.get('image_file'),
+                'image_file': image_file,
                 'detections': detections
             })
 
     entries.sort(key=lambda x: x['timestamp'], reverse=True)
     return entries
-
 
 @app.route('/')
 def index():
